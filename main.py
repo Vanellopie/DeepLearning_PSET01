@@ -2,45 +2,34 @@ import streamlit as st
 from fastai.vision.all import *
 import pathlib
 import tempfile
+import gdown
 
 # Set the title of the app
 st.title("Mongolian Food Classifier")
 
-# Load the trained model
-@st.cache(allow_output_mutation=True)
-def load_model():
-    model_path = pathlib.Path('mongolian_food_classifier.pkl')  # Update this path
-    learn = load_learner(model_path)
-    return learn
+st.markdown("""### Upload your image here""")
 
-learn = load_model()
+image_file = st.file_uploader("Image Uploader", type=["png","jpg","jpeg"])
 
-# Function to classify the image
-def classify_image(img):
-    pred, pred_idx, probs = learn.predict(img)
-    return pred, probs[pred_idx]
+## Model Loading Section
+model_path = Path("export.pkl")
 
-# Upload image through Streamlit
-uploaded_file = st.file_uploader("Upload an image of Mongolian food...", type=["jpg", "png", "jpeg"])
+if not model_path.exists():
+    with st.spinner("Downloading model... this may take awhile! \n Don't stop it!"):
+        url = 'https://drive.google.com/file/d/1tc0kGd7F-2Z0cpJMXQUQLjrppud81HlV/view?usp=sharing'
+        output = 'export.pkl'
+        gdown.download(url, output, quiet=False)
+    learn_inf = load_learner('export.pkl')
+else:
+    learn_inf = load_learner('export.pkl')
 
-if uploaded_file is not None:
-    # Display the uploaded image
-    st.image(uploaded_file, caption='Uploaded Image.', use_column_width=True)
-    st.write("")
-    st.write("Classifying...")
+col1, col2 = st.columns(2)
+if image_file is not None:
+    img = PILImage.create(image_file)
+    pred, pred_idx, probs = learn_inf.predict(img)
 
-    # Save the uploaded file to a temporary file
-    with tempfile.NamedTemporaryFile(delete=False) as tmp_file:
-        tmp_file.write(uploaded_file.getvalue())
-        tmp_file_path = tmp_file.name
-
-    # Open the image and classify it
-    img = PILImage.create(tmp_file_path)
-    pred, confidence = classify_image(img)
-
-    # Display the result
-    st.write(f"Prediction: {pred}")
-    st.write(f"Confidence: {confidence:.4f}")
-
-    # Clean up the temporary file
-    os.unlink(tmp_file_path)
+    with col1:
+        st.markdown(f"""### Predicted animal: {pred.capitalize()}""")
+        st.markdown(f"""### Probability: {round(max(probs.tolist()), 3) * 100}%""")
+    with col2:
+        st.image(img, width=300)
