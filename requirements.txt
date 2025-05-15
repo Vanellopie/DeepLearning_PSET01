@@ -3,3 +3,4 @@ streamlit_option_menu
 firebase_admin
 fastai
 gdown
+google.generativeai
